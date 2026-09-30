@@ -56,7 +56,7 @@ Do not casually upgrade Unity, OpenXR, XR Interaction Toolkit, XR Hands, Meta Op
 
 # FOUNDATION 001 — HANDS + TABLE
 
-Status: `ACTIVE`
+Status: `DONE`
 
 ## Goal
 
@@ -95,17 +95,17 @@ Scene contains only what is needed to prove:
 
 On a native Quest 3 build:
 
-- [ ] Game launches successfully.
-- [ ] Passthrough is not visible.
-- [ ] Player is stationary/seated.
-- [ ] Both tracked hands appear and follow reliably.
-- [ ] Table is comfortably positioned from seated posture.
-- [ ] Cube is resting on table.
-- [ ] Player can grab cube with tracked hand.
-- [ ] Player can move cube naturally.
-- [ ] Player can release cube.
-- [ ] No blocking compile/runtime errors.
-- [ ] Performance is acceptable for this empty prototype.
+- [x] Game launches successfully.
+- [x] Passthrough is not visible.
+- [x] Player is stationary/seated.
+- [x] Both tracked hands appear and follow reliably.
+- [x] Table is comfortably positioned from seated posture.
+- [x] Cube is resting on table.
+- [x] Player can grab cube with tracked hand.
+- [x] Player can move cube naturally.
+- [x] Player can release cube.
+- [x] No blocking compile/runtime errors.
+- [x] Performance is acceptable for this empty prototype.
 
 ## Explicitly Not Included
 
@@ -122,18 +122,18 @@ No:
 
 ## Completion
 
-Quest Test Date:
-Result:
-Problems Found:
-Fixes:
-Commit:
-Notes:
+Quest Test Date: 2026-09-30
+Result: PASS on native Quest 3. Direct tracked-hand grabbing works with either hand, throwing works, Recall works from outside seated reach, and a recalled object can immediately be grabbed and thrown again. Hand tracking initializes promptly when UNDER is launched hands-first without active controllers.
+Problems Found: Quest controller-to-hand modality switching can delay hand availability when controllers are active or selected at startup.
+Fixes: Configured the Android OpenXR path as hands-first, retained direct near-field XRI interaction, and verified safe Recall-to-grab Rigidbody state restoration.
+Commit: Pending.
+Notes: Known issue/constraint for later hardening — controller-present and controller-to-hand startup transitions are not yet an accepted launch path. Until hardened, launch UNDER hands-first without active controllers.
 
 ---
 
 # FOUNDATION 002 — THE HOLE
 
-Status: `TODO`
+Status: `ACTIVE`
 
 ## Goal
 
@@ -710,11 +710,75 @@ Development uses gated Foundations rather than feature-parallel implementation.
 Reason:
 Every major technical/design risk should be proven in-headset before content is stacked on top of it.
 
+### 2026-09-30
+Decision:
+Foundation 001 is accepted with a hands-first startup constraint.
+
+Reason:
+Native Quest 3 testing passed direct two-hand grabbing, throwing, seated-reach Recall, immediate post-Recall grabbing/throwing, and prompt hand initialization when launched without active controllers. Controller-to-hand modality switching can still delay hand availability when controllers are active or selected at startup.
+
+Impact:
+Foundation 002 may proceed, but controller-present startup and controller-to-hand switching remain a known hardening task. The validated launch path is hands-first without active controllers.
+
 ---
 
 # SESSION LOG
 
 Add one entry per meaningful development session.
+
+## 2026-09-27 — Foundation 001 Implementation
+
+Date: 2026-09-27
+Foundation: FOUNDATION 001 — HANDS + TABLE
+Goal: Create the minimal full-VR Quest 3 hands-and-table prototype.
+
+Changes:
+- Created `UNDER_Prototype` with the existing tracked-hand/XRI infrastructure, stripped of MR scene systems.
+- Added an opaque virtual background, prototype floor, seated-height table, and one grabbable cube.
+- Disabled Android Meta passthrough and spatial/scene OpenXR features while preserving Quest and hand tracking.
+- Made `UNDER_Prototype` the sole enabled build scene.
+
+Quest Test:
+- Pending native Quest 3 validation.
+
+Result:
+- Implementation complete in Editor; status moved to `TEST` pending headset acceptance.
+
+Next:
+- Verify launch, opaque VR, both hands, seated reach, cube grab/move/release, and performance on Quest 3.
+
+Commit:
+- Pending Quest acceptance.
+
+## 2026-09-30 — Foundation 001 Quest Acceptance
+
+Date: 2026-09-30
+Foundation: FOUNDATION 001 — HANDS + TABLE
+Goal: Complete the native Quest 3 acceptance gate.
+
+Changes:
+- No new implementation in this session; recorded the successful headset result.
+- Marked Foundation 001 `DONE`.
+- Marked Foundation 002 `ACTIVE` without beginning implementation.
+
+Quest Test:
+- PASS: hands initialize promptly when UNDER is launched hands-first without active controllers.
+- PASS: either tracked hand can directly grab and naturally manipulate the cube.
+- PASS: direct throwing preserves release motion.
+- PASS: Recall retrieves the cube from outside seated reach.
+- PASS: a recalled cube can immediately be directly grabbed and thrown again.
+
+Result:
+- Foundation 001 acceptance gate passed on native Quest 3.
+
+Known Issue / Constraint:
+- Active controllers or a controller-selected startup path can delay controller-to-hand switching and hand availability. Preserve the hands-first launch path for now and harden mixed controller/hand startup later.
+
+Next:
+- Foundation 002 — THE HOLE is active, but implementation has not started.
+
+Commit:
+- Pending.
 
 ## Session Template
 
@@ -740,14 +804,8 @@ Commit:
 
 # CURRENT ACTION
 
-FOUNDATION 001 — HANDS + TABLE
+FOUNDATION 002 — THE HOLE
 
-Do not work ahead.
+Status is `ACTIVE`.
 
-When it passes on Quest 3:
-1. Record results above.
-2. Commit.
-3. Push.
-4. Change Foundation 001 to `DONE`.
-5. Change Foundation 002 to `ACTIVE`.
-6. Begin the hole.
+Implementation has not started. Do not work ahead until explicitly directed.
