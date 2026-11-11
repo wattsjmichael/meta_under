@@ -133,7 +133,7 @@ Notes: Known issue/constraint for later hardening — controller-present and con
 
 # FOUNDATION 002 — THE HOLE
 
-Status: `ACTIVE`
+Status: `DONE`
 
 ## Goal
 
@@ -171,14 +171,14 @@ Do not commit to a complicated portal architecture until the simplest convincing
 
 On Quest 3:
 
-- [ ] Opening reads as a hole rather than a flat image.
-- [ ] Player naturally leans over to inspect it.
-- [ ] Looking into it produces convincing depth.
-- [ ] Space below feels larger than the physical table/basement allows.
-- [ ] Head movement preserves the illusion.
-- [ ] No obvious rendering failure destroys the effect.
-- [ ] Comfortable from seated position.
-- [ ] Performance remains acceptable.
+- [x] Opening reads as a hole rather than a flat image.
+- [x] Player naturally leans over to inspect it.
+- [x] Looking into it produces convincing depth.
+- [x] Space below feels larger than the physical table/basement allows.
+- [x] Head movement preserves the illusion.
+- [x] No obvious rendering failure destroys the effect.
+- [x] Comfortable from seated position.
+- [x] Performance remains acceptable.
 
 ### Human Kill Test
 
@@ -190,18 +190,18 @@ If NO, Foundation 002 is not done.
 
 ## Completion
 
-Quest Test Date:
-Result:
-Problems Found:
-Fixes:
-Commit:
-Notes:
+Quest Test Date: 2026-10-01
+Result: PASS on native Quest 3. The tabletop aperture isolates UNDER from the ordinary room, preserves the normal floor outside and beneath the table, and presents an impossible deep space with moving depth references.
+Problems Found: The room floor had been physically opened and the large UNDER environment could be seen beside and underneath the table, destroying the spatial-impossibility illusion.
+Fixes: Restored one continuous solid room floor, removed the table-apron concealment workaround, added a top-facing stencil aperture, restricted every UNDER material to the aperture stencil, and made the ordinary floor reject only aperture pixels. UNDER now uses normal geometry depth inside the opening while remaining invisible from beside or beneath the table.
+Commit: Pending.
+Notes: Uses one lightweight stencil mask, real prototype geometry, the existing stereo XR camera, and one moving depth cue. No render texture, secondary camera, portal reprojection, extra lights, or Foundation 003 interaction is present. Android is explicitly Vulkan, matching the tested Quest render path.
 
 ---
 
 # FOUNDATION 003 — REACH INTO UNDER
 
-Status: `TODO`
+Status: `DONE`
 
 ## Goal
 
@@ -227,14 +227,14 @@ Use a primitive object. Do not use creature art yet.
 
 On Quest 3:
 
-- [ ] Hand can cross the visual breach without the illusion breaking badly.
-- [ ] Grab detection works below the table.
-- [ ] Player can retrieve object.
-- [ ] Object transitions into basement correctly.
-- [ ] Physics remains stable.
-- [ ] No confusing collision wall blocks the hand.
-- [ ] Interaction is understandable without text instructions.
-- [ ] Comfortable and repeatable.
+- [x] Hand can cross the visual breach without the illusion breaking badly.
+- [x] Grab detection works below the table.
+- [x] Player can retrieve object.
+- [x] Object transitions into basement correctly.
+- [x] Physics remains stable.
+- [x] No confusing collision wall blocks the hand.
+- [x] Interaction is understandable without text instructions.
+- [x] Comfortable and repeatable for vertical-slice production; remaining regression and interaction-edge-case work is deferred to final polish.
 
 ### Technical Kill Test
 
@@ -242,18 +242,18 @@ If reaching through the opening cannot be made reliable and convincing, stop and
 
 ## Completion
 
-Quest Test Date:
-Result:
-Problems Found:
-Fixes:
-Commit:
-Notes:
+Quest Test Date: 2026-10-01 partial native Quest 3 pass; accepted for vertical-slice production on 2026-11-11.
+Result: ACCEPTED for vertical-slice production. Direct tracked-hand reach, grab, room extraction, and throwing passed on Quest 3. The existing Foundation 001 Recall implementation is reliably gated off in UNDER and registered after room extraction. Remaining Recall regression, hand-boundary rendering, and interaction edge cases are deferred to final polish.
+Problems Found: Foundation 002's impossible space is stencil-isolated but shares normal Unity world coordinates, requiring an explicit visual-state transition. Runtime enabling also left the extracted object's `RecallableObject` outside the shared Recall registry in the Editor integration test.
+Fixes: Added a reusable finite `PortalBoundary` and generic `PortalCrossingParticipant`. The participant switches portal/room material bindings only after a real aperture crossing. `RecallableObject` now exposes a reusable availability method that synchronizes component state and shared-registry membership; the crossing participant uses it to disable Recall in UNDER and enable the unchanged Recall motion/gesture system in the room.
+Commit: Included in the vertical-slice production checkpoint.
+Notes: The remaining Foundation 003 acceptance gate is explicitly waived for the competition sprint. The existing hands remain one normally rendered mesh per hand. Table/rim depth naturally occludes much of the hand at the boundary from the intended lean-over view, but there is no exact per-vertex portal clipping; extreme oblique views may show a hand segment outside the aperture. Gauntlet Pull is retained as a provisional gameplay mechanic and will be reevaluated during final polish.
 
 ---
 
 # FOUNDATION 004 — THE LOCK
 
-Status: `TODO`
+Status: `ACTIVE`
 
 ## Goal
 
@@ -780,6 +780,188 @@ Next:
 Commit:
 - Pending.
 
+## 2026-10-01 — Foundation 002 Implementation
+
+Date: 2026-10-01
+Foundation: FOUNDATION 002 — THE HOLE
+Goal: Build the simplest Quest-friendly prototype that can prove impossible depth through the table.
+
+Changes:
+- Rebuilt the tabletop as four physical rails surrounding a large rectangular opening.
+- Opened the floor beneath the table while preserving the visible room floor and table setup.
+- Added a short dark throat and table aprons that conceal the geometric cheat outside the opening.
+- Added a roughly 20-meter-deep physical underworld vista using primitive shelves, ledges, columns, distant walls, and repeated emissive scale markers.
+- Added one subtle distant moving light using `UnderworldDrifter`.
+- Preserved the Foundation 001 cube, direct hand interaction, throwing, Recall, and XR configuration.
+
+Technique:
+- Single-camera, real-geometry aperture and vista. Stereo disparity and head-motion parallax come directly from the existing XR camera; there is no render texture, secondary portal camera, or stencil pass.
+
+Editor Test:
+- Play Mode completed with no errors.
+- The distant motion cue moved correctly.
+- The regression cube remained dynamic with Recall enabled.
+- `UNDER_Prototype` remains the sole enabled build scene.
+
+Quest Test:
+- Pending native Quest 3 stereo, comfort, performance, and human lean-over validation.
+
+Result:
+- Implementation moved to `TEST`; Foundation 002 is not yet `DONE`.
+
+Next:
+- Test the breach on Quest 3 and answer the Human Kill Test: “Did I instinctively want to lean over and look farther into it?”
+
+Commit:
+- Pending Quest acceptance.
+
+## 2026-10-01 — Foundation 002 View-Isolation Fix
+
+Date: 2026-10-01
+Foundation: FOUNDATION 002 — THE HOLE
+Goal: Correct the failed literal-pit implementation so UNDER is visible only through the tabletop aperture.
+
+Changes:
+- Restored the basement/room floor as one continuous solid object and removed the physical floor opening.
+- Removed the table aprons that attempted to conceal the old world-space pit.
+- Added a top-facing, colorless stencil aperture inside the tabletop opening.
+- Converted UNDER prototype materials to a stencil-tested single-camera shader with normal geometry depth.
+- Added a stencil-aware ordinary floor material so the intact floor is hidden only in aperture pixels viewed from above.
+- Removed the two underworld point lights; the portal materials use a cheap prototype lighting term.
+- Preserved all Foundation 001 XR, tracked-hand, direct-grab, throwing, and Recall systems.
+
+Editor Test:
+- Lean-over and left/right-offset views show the deep geometry only inside the aperture with real head-motion parallax.
+- Beside-table and under-table views show the continuous room floor and no UNDER geometry.
+- Play Mode completed with no errors; only the existing Windows OpenXR loader-path warning was logged.
+- The distant motion cue remained active, and the regression cube remained dynamic with XR Grab enabled.
+- `UNDER_Prototype` remains in the Quest build.
+
+Quest Test:
+- Pending native Quest 3 stereo/view-isolation retest.
+
+Result:
+- Corrected implementation remains `TEST`; Foundation 002 is not `DONE`.
+
+Next:
+- Repeat the five-view isolation/parallax acceptance test on Quest 3. Do not begin Foundation 003.
+
+Commit:
+- Pending Quest acceptance.
+
+## 2026-10-01 — Foundation 002 Quest Acceptance
+
+Date: 2026-10-01
+Foundation: FOUNDATION 002 — THE HOLE
+Goal: Validate the corrected stencil-isolated impossible-space prototype on Quest 3.
+
+Quest Test:
+- PASS: UNDER is visible through the tabletop aperture without leaking beside or beneath the table.
+- PASS: The normal room floor remains visually intact outside the aperture.
+- PASS: The deep space and moving references communicate impossible scale.
+
+Result:
+- Foundation 002 acceptance gate passed and status changed to `DONE`.
+
+Next:
+- Begin Foundation 003 only: direct tracked-hand interaction across the breach boundary.
+
+Commit:
+- Pending.
+
+## 2026-10-01 — Foundation 003 Implementation
+
+Date: 2026-10-01
+Foundation: FOUNDATION 003 — REACH INTO UNDER
+Goal: Prove that a tracked hand can directly retrieve a physical object through the impossible aperture.
+
+Changes:
+- Added a reusable finite `PortalBoundary` to the existing aperture.
+- Added a generic `PortalCrossingParticipant` with per-renderer UNDER/room material bindings and room-only behaviour activation.
+- Added one bright primitive test object 14 cm below the aperture on a small portal-only reach platform.
+- Reused the Foundation 001 velocity-tracked `XRGrabInteractable`, dynamic Rigidbody, throw settings, and `RecallableObject` configuration.
+- Kept Recall disabled while the object belongs to UNDER; it becomes available only after a valid extraction through the aperture.
+- Preserved the Foundation 001 cube and all XR/hand systems, plus the Foundation 002 stencil/parallax implementation and intact room floor.
+
+Architecture:
+- UNDER and the room share Unity world coordinates; stencil controls presentation, not physics position.
+- A participant changes side only when its physical path intersects the finite aperture plane. Crossing the same plane outside the opening is ignored.
+- The transition is bidirectional and generic enough for later props or creature roots with multiple renderer bindings.
+
+Editor Test:
+- Portal-side object and platform are visible through the aperture and hidden from the ordinary under-table view.
+- Play Mode verified UNDER → room and room → UNDER transitions through the aperture.
+- Crossing the boundary plane outside the aperture did not change state.
+- Room extraction enabled the unchanged Recall component and normal URP rendering; the Rigidbody remained under XRI control.
+- No blocking Console errors occurred.
+
+Hand Rendering Limitation:
+- The existing single hand mesh is not split into separate stencil and room passes. Table/rim depth supplies natural boundary occlusion from the intended view, but exact partial-hand clipping is not implemented in this first interaction test.
+
+Quest Test:
+- Pending native Quest 3 direct-reach, extraction, throwing, Recall, stereo, and comfort validation.
+
+Result:
+- Foundation 003 moved to `TEST`; it is not `DONE`.
+
+Next:
+- Run the complete Foundation 003 headset acceptance sequence. Do not begin Foundation 004.
+
+Commit:
+- Pending Quest acceptance.
+
+## 2026-10-01 — Foundation 003 Extracted-Object Recall
+
+Date: 2026-10-01
+Foundation: FOUNDATION 003 — REACH INTO UNDER
+Goal: Reuse Foundation 001 Recall after successful portal extraction.
+
+Changes:
+- Preserved the existing Recall gesture, movement, arrival catch, direct grab, and XRI throw implementation.
+- Kept the portal object excluded from Recall while it belongs to UNDER.
+- Added explicit Recall availability/registry synchronization when the crossing participant changes sides.
+- Kept the portal stencil, finite-boundary crossing, direct-only interaction, and seated placement unchanged.
+
+Test:
+- Verified the object is absent from the Recall registry before extraction.
+- Verified room extraction enables and registers the same `RecallableObject` used by the Foundation 001 cube.
+- Verified Recall starts for the extracted object and restores a dynamic Rigidbody with XRI grab/throw enabled.
+- Repeated Recall initiation succeeded after re-extraction; no kinematic angular-velocity warning or other error occurred.
+
+Result:
+- Foundation 003 remains `TEST` pending the complete native Quest Recall sequence.
+
+Next:
+- Quest test: extract, throw out of reach, Recall, direct grab, throw again. Do not begin Foundation 004.
+
+Commit:
+- Pending Quest acceptance.
+
+## 2026-11-11 — Vertical-Slice Production Checkpoint
+
+Date: 2026-11-11
+Foundation: FOUNDATION 002 / FOUNDATION 003 / FOUNDATION 004
+Goal: Protect the accepted portal foundation and move into competition vertical-slice production.
+
+Decisions:
+- Foundation 002 is accepted and remains `DONE`.
+- Foundation 003 is accepted for vertical-slice production and is now `DONE`.
+- Remaining portal/hand-boundary regression, Recall regression, and interaction edge cases are deferred to final polish.
+- Gauntlet Pull is retained as a provisional gameplay mechanic for the vertical slice.
+- Foundation 004 — THE LOCK is now `ACTIVE`.
+- The project has entered vertical-slice production with 8 days remaining in the competition sprint.
+
+Recovered Work:
+- The ordered Artifact Lock controller, rotary mechanism, slider mechanism, two-hand seal, and deterministic Editor builder scripts were recovered from the interrupted session.
+- The Artifact Lock builder has not been executed. No Artifact Lock GameObjects or generated artifact materials have been added to the scene yet.
+
+Next:
+- Continue Foundation 004 deliberately from the protected checkpoint.
+- Do not execute the Artifact Lock builder until the scene mutation and generated assets are explicitly reviewed.
+
+Commit:
+- Checkpoint UNDER portal interactions and begin artifact lock.
+
 ## Session Template
 
 Date:
@@ -804,8 +986,8 @@ Commit:
 
 # CURRENT ACTION
 
-FOUNDATION 002 — THE HOLE
+FOUNDATION 004 — THE LOCK
 
 Status is `ACTIVE`.
 
-Implementation has not started. Do not work ahead until explicitly directed.
+UNDER is in vertical-slice production with 8 days remaining. Foundation 002 and Foundation 003 are accepted for production; remaining regression and interaction-edge-case work is deferred to final polish. Gauntlet Pull remains provisional. Continue THE LOCK from the recovered scripts without executing the Artifact Lock builder until its scene mutation and generated assets are explicitly reviewed.

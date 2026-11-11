@@ -43,6 +43,7 @@ namespace Under.Foundation
         Vector3 m_TargetWorldOffset;
         Vector3 m_ReturnStartPosition;
         float m_ReturnStartTime;
+        float m_ActiveReturnDuration;
         bool m_IsRecalling;
         bool m_IsWaitingForGrab;
         float m_ArrivalCatchEndTime;
@@ -50,6 +51,7 @@ namespace Under.Foundation
         bool m_OriginalIsKinematic;
         bool m_OriginalDetectCollisions;
         bool m_OriginalInteractableEnabled;
+        bool m_Initialized;
 
         /// <summary>
         /// Whether this object is currently returning to a requesting hand.
@@ -64,19 +66,18 @@ namespace Under.Foundation
 
         void Awake()
         {
-            m_Rigidbody = GetComponent<Rigidbody>();
-            m_GrabInteractable = GetComponent<XRGrabInteractable>();
-            m_GrabInteractable.selectEntered.AddListener(OnSelectEntered);
+            EnsureInitialized();
         }
 
         void OnDestroy()
         {
-            if (m_GrabInteractable != null)
+            if (m_Initialized && m_GrabInteractable != null)
                 m_GrabInteractable.selectEntered.RemoveListener(OnSelectEntered);
         }
 
         void OnEnable()
         {
+            EnsureInitialized();
             s_Recallables.Add(this);
         }
 
@@ -85,6 +86,23 @@ namespace Under.Foundation
             s_Recallables.Remove(this);
             if (isRecalling)
                 RestoreNormalState();
+        }
+
+        /// <summary>
+        /// Makes this object available or unavailable to the shared Recall registry.
+        /// Portal crossing uses this so an object cannot be recalled before extraction.
+        /// </summary>
+        public void SetRecallAvailable(bool available)
+        {
+            EnsureInitialized();
+            enabled = available;
+
+            // Explicit registration makes runtime availability changes reliable even
+            // when another component toggles Recall during its own update callback.
+            if (available && isActiveAndEnabled)
+                s_Recallables.Add(this);
+            else
+                s_Recallables.Remove(this);
         }
 
         void Update()
@@ -106,7 +124,7 @@ namespace Under.Foundation
 
             var targetPosition = GetTargetPosition();
             var normalizedTime = Mathf.Clamp01(
-                (Time.unscaledTime - m_ReturnStartTime) / Mathf.Max(0.05f, m_ReturnDuration));
+                (Time.unscaledTime - m_ReturnStartTime) / Mathf.Max(0.05f, m_ActiveReturnDuration));
             var easedProgress = m_ReturnEasing == null
                 ? Mathf.SmoothStep(0f, 1f, normalizedTime)
                 : Mathf.Clamp01(m_ReturnEasing.Evaluate(normalizedTime));
@@ -159,11 +177,12 @@ namespace Under.Foundation
                 closestDistanceSquared = distanceSquared;
             }
 
-            return closest != null && closest.BeginRecall(targetAnchor, targetWorldOffset, requestingHand);
+            return closest != null && closest.BeginRecall(targetAnchor, targetWorldOffset, requestingHand, -1f);
         }
 
-        bool CanRecallFrom(Vector3 requestingPosition)
+        public bool CanRecallFrom(Vector3 requestingPosition)
         {
+            EnsureInitialized();
             if (!isActiveAndEnabled || isRecalling || m_GrabInteractable == null || m_GrabInteractable.isSelected)
                 return false;
 
@@ -171,7 +190,34 @@ namespace Under.Foundation
             return (transform.position - requestingPosition).sqrMagnitude >= minimumDistanceSquared;
         }
 
-        bool BeginRecall(Transform targetAnchor, Vector3 targetWorldOffset, Handedness requestingHand)
+        /// <summary>
+        /// Starts the existing safe Recall movement for a deliberately targeted object,
+        /// deriving travel duration from an Inspector-tuned pull speed.
+        /// </summary>
+        public bool TryBeginDirectedPull(
+            Transform targetAnchor,
+            Vector3 targetWorldOffset,
+            Handedness requestingHand,
+            float pullSpeed)
+        {
+            if (targetAnchor == null || !CanRecallFrom(targetAnchor.position))
+                return false;
+
+            var targetPosition = targetAnchor.position + targetWorldOffset;
+            var distance = Vector3.Distance(transform.position, targetPosition);
+            var duration = distance / Mathf.Max(0.1f, pullSpeed);
+            return BeginRecall(
+                targetAnchor,
+                targetWorldOffset,
+                requestingHand,
+                Mathf.Clamp(duration, 0.08f, 0.60f));
+        }
+
+        bool BeginRecall(
+            Transform targetAnchor,
+            Vector3 targetWorldOffset,
+            Handedness requestingHand,
+            float durationOverride)
         {
             if (targetAnchor == null || isRecalling || m_GrabInteractable.isSelected)
                 return false;
@@ -180,6 +226,7 @@ namespace Under.Foundation
             m_TargetWorldOffset = targetWorldOffset;
             m_ReturnStartPosition = transform.position;
             m_ReturnStartTime = Time.unscaledTime;
+            m_ActiveReturnDuration = durationOverride > 0f ? durationOverride : m_ReturnDuration;
             m_IsRecalling = true;
 
             m_OriginalUseGravity = m_Rigidbody.useGravity;
@@ -278,6 +325,17 @@ namespace Under.Foundation
             m_Rigidbody.velocity = Vector3.zero;
 #endif
             m_Rigidbody.angularVelocity = Vector3.zero;
+        }
+
+        void EnsureInitialized()
+        {
+            if (m_Initialized)
+                return;
+
+            m_Rigidbody = GetComponent<Rigidbody>();
+            m_GrabInteractable = GetComponent<XRGrabInteractable>();
+            m_GrabInteractable.selectEntered.AddListener(OnSelectEntered);
+            m_Initialized = true;
         }
     }
 }
